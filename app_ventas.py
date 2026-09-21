@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales limpios estilo Mercado Libre y E-commerce
+# Estilos visuales avanzados estilo E-commerce con efecto Hover en tarjeta
 st.markdown("""
     <style>
     .stApp {
@@ -22,22 +22,25 @@ st.markdown("""
     }
     .ml-card {
         background-color: #ffffff;
-        border-radius: 6px;
+        border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        padding: 14px;
+        padding: 16px;
         margin-bottom: 16px;
         border: 1px solid #e0e0e0;
-        transition: transform 0.2s;
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
     .ml-card:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        border-color: #3483fa;
     }
     .ml-title {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 600;
         color: #333;
         margin: 8px 0;
-        height: 40px;
+        height: 42px;
         overflow: hidden;
     }
     .price-old {
@@ -187,14 +190,13 @@ if st.session_state.producto_seleccionado is not None:
     col_img, col_info = st.columns([1.2, 1])
     
     with col_img:
-        # Imagen grande ampliada
         st.markdown(f'<img src="{p["img_url"]}" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 1px solid #ddd; background: #fff; padding: 10px;">', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Botón directo exclusivo de la carpeta de Google Drive de ESTE mueble
+        # Botón exclusivo de la carpeta de Google Drive de ESTE mueble
         st.markdown(f"""
             <a href="{p['url_drive']}" target="_blank" style="display: block; width: 100%; background-color: #0073e6; color: white; padding: 12px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                📁 Abrir Carpeta Exclusiva en Google Drive (Ver más fotos)
+                📁 Abrir Carpeta Exclusiva en Google Drive (Ver todas las fotos)
             </a>
         """, unsafe_allow_html=True)
         
@@ -297,6 +299,7 @@ else:
                     precio_anterior = precio * 1.30  # 30% más caro tachado
 
                     with col_actual:
+                        # Tarjeta con efectos de sombra y hover
                         st.markdown(f"""
                             <div class="ml-card">
                                 <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:8px;">{categoria}</span>
@@ -307,10 +310,10 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Imagen interactiva compatible con la versión actual de Streamlit
                         st.image(img_url, use_container_width=True)
                         
-                        if st.button(f"🔍 Ver Detalle Completo", key=f"btn_det_{idx}", use_container_width=True):
+                        # Al hacer clic en este botón principal de la tarjeta, se despliega toda la descripción detallada
+                        if st.button(f"🔍 Ver Detalle y Descripción", key=f"btn_det_{idx}", use_container_width=True):
                             st.session_state.producto_seleccionado = {
                                 "nombre": nombre,
                                 "categoria": categoria,
