@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales limpios estilo Mercado Libre / Mercado Pago
+# Estilos visuales limpios estilo Mercado Libre
 st.markdown("""
     <style>
     .stApp {
@@ -62,12 +62,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Enlaces a tu Google Sheet "MUEBLES"
-SHEET_ID = "1Jw1ZtYGdAx2BLB9yxgmbZ7F4yc4Pka32bIa2XtxtSHw"  # ID de tu planilla MUEBLES
+SHEET_ID = "1Jw1ZtYGdAx2BLB9yxgmbZ7F4yc4Pka32bIa2XtxtSHw"
 GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
-# ⚠️ PEGA AQUÍ TU URL DE APPS SCRIPT DE LA PLANILLA MUEBLES
-SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_qUyQG_xK3AltPc9J_iEHWkFwskoyfAeZBg_DvRqnMLokCdEY/exec"
+# ⚠️ TU URL DE APPS SCRIPT DE LA PLANILLA MUEBLES
+SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
 
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTO ---
 with st.sidebar:
@@ -84,10 +84,7 @@ with st.sidebar:
         cant_cuotas = st.selectbox("Cantidad de Cuotas", options=[3, 6, 9, 12], index=1)
         interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 30.0, 10.0, 1.0)
         
-        # Calcular precio financiado automáticamente
         precio_financiado = precio_contado * (1 + (interes_est / 100))
-        
-        # Subir foto real desde el celular o PC
         foto_file = st.file_uploader("Foto del Mueble", type=["jpg", "jpeg", "png"])
         
         btn_publicar = st.form_submit_button("💾 Guardar Mueble en la Nube", use_container_width=True)
@@ -96,7 +93,6 @@ with st.sidebar:
             if not nombre_mueble.strip():
                 st.error("⚠️ El nombre es obligatorio.")
             else:
-                # Convertir imagen a Base64 para enviarla de forma segura por Apps Script
                 img_base64 = ""
                 mime_type = "image/jpeg"
                 nombre_archivo = "mueble_default.jpg"
@@ -134,7 +130,7 @@ with st.sidebar:
                     except Exception as e:
                         st.error(f"Error de conexión: {e}")
                 else:
-                    st.warning("⚠️ Configura la variable `SCRIPT_URL_MUEBLES` con tu Apps Script.")
+                    st.warning("⚠️ Configura la variable `SCRIPT_URL_MUEBLES`.")
 
 # --- CUERPO PRINCIPAL: CATÁLOGO INTERNO DE VENTAS ---
 st.markdown("<h2>🛍️ A&G VENTAS PRO - Stock Disponible</h2>", unsafe_allow_html=True)
@@ -144,18 +140,35 @@ st.markdown("<br>", unsafe_allow_html=True)
 @st.cache_data(ttl=0)
 def cargar_catalogo():
     try:
-        df = pd.read_csv(CSV_URL, header=2)
-        df.columns = [str(col).strip().upper() for col in df.columns]
-        return df
+        # Leemos el CSV completo y buscamos dinámicamente la fila de encabezados
+        df_raw = pd.read_csv(CSV_URL, header=None)
+        
+        header_row_idx = None
+        for idx, row in df_raw.iterrows():
+            row_str = str(row.values).upper()
+            if "NOMBRE" in row_str and "PRECIO" in row_str:
+                header_row_idx = idx
+                break
+        
+        if header_row_idx is not None:
+            df = pd.read_csv(CSV_URL, header=header_row_idx)
+            df.columns = [str(c).strip().upper() for c in df.columns]
+            return df
+        else:
+            # Fallback por si está en la fila por defecto
+            df = pd.read_csv(CSV_URL, header=0)
+            df.columns = [str(c).strip().upper() for c in df.columns]
+            return df
     except Exception as e:
+        st.error(f"Error leyendo la planilla: {e}")
         return None
 
 df_muebles = cargar_catalogo()
 
 if df_muebles is not None and not df_muebles.empty:
-    # Limpieza de columnas esperadas: ID, NOMBRE, PRECIO, CANTIDAD, CATEGORIA, DESCRIPCION, PRECIO FINANCIADO, CANT CUOTAS
+    # Identificar columnas con flexibilidad
     col_nombre = next((c for c in df_muebles.columns if "NOMBRE" in c), None)
-    col_precio = next((c for c in df_muebles.columns if c == "PRECIO"), None)
+    col_precio = next((c for c in df_muebles.columns if c == "PRECIO" or "PRECIO" in c), None)
     col_cat = next((c for c in df_muebles.columns if "CATEGORIA" in c), None)
     col_desc = next((c for c in df_muebles.columns if "DESCRIPCION" in c), None)
     col_pfin = next((c for c in df_muebles.columns if "FINANCIADO" in c), None)
@@ -164,62 +177,84 @@ if df_muebles is not None and not df_muebles.empty:
     if col_nombre:
         df_valid = df_muebles.dropna(subset=[col_nombre]).copy()
         
-        # Filtro de búsqueda
+        # Filtrar filas vacías o de prueba
+        df_valid = df_valid[~df_valid[col_nombre].astype(str).str.upper().isin(['NAN', 'NONE', '', 'NOMBRE'])]
+
         if busqueda:
             df_valid = df_valid[df_valid[col_nombre].astype(str).str.contains(busqueda, case=False, na=False)]
 
-        cols = st.columns(3) # Grilla de 3 columnas estilo Mercado Libre
-        
-        for idx, row in df_valid.iterrows():
-            col_actual = cols[idx % 3]
+        if df_valid.empty:
+            st.info("📌 No se encontraron muebles que coincidan con la búsqueda.")
+        else:
+            cols = st.columns(3)
             
-            nombre = str(row[col_nombre])
-            precio = float(str(row[col_precio]).replace('$', '').replace('.', '').replace(',', '.')) if col_precio and pd.notna(row[col_precio]) else 0.0
-            categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
-            desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
-            
-            # Extraer imagen y descripción limpia
-            img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
-            desc_limpia = desc_completa
-            if "[FOTO:" in desc_completa:
-                partes = desc_completa.split("[FOTO:")
-                desc_limpia = partes[0].strip()
-                img_url = partes[1].replace("]", "").strip()
-
-            p_fin = float(str(row[col_pfin]).replace('$', '').replace('.', '').replace(',', '.')) if col_pfin and pd.notna(row[col_pfin]) else precio
-            n_cuotas = int(row[col_cuotas]) if col_cuotas and pd.notna(row[col_cuotas]) else 6
-            valor_cuota = p_fin / n_cuotas if n_cuotas > 0 else precio
-
-            with col_actual:
-                st.markdown(f"""
-                    <div class="ml-card">
-                        <img src="{img_url}" style="width: 100%; height: 190px; object-fit: cover; border-radius: 4px;">
-                        <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-top:8px;">{categoria}</span>
-                        <div class="ml-title">{nombre}</div>
-                        <div style="font-size:11px; color:#666; margin-bottom:6px;">{desc_limpia}</div>
-                        <div class="ml-price">$ {precio:,.2f}</div>
-                        <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
-                    </div>
-                """, unsafe_allow_html=True)
+            for idx, row in df_valid.reset_index(drop=True).iterrows():
+                col_actual = cols[idx % 3]
                 
-                # Botón de WhatsApp integrado para el vendedor
-                with st.expander("💬 Enviar Presupuesto WhatsApp"):
-                    tel_wsp = st.text_input("Celular cliente (ej: 3764xxxxxx)", key=f"t_{idx}")
-                    if st.button("🚀 Enviar Presupuesto", key=f"b_{idx}", use_container_width=True):
-                        if not tel_wsp.strip():
-                            st.warning("⚠️ Ingrese el número.")
-                        else:
-                            msg = f"¡Hola! 👋 Te enviamos la cotización desde *Mueblería A&G*:\n\n" \
-                                  f"🪑 *{nombre}*\n" \
-                                  f"📝 {desc_limpia}\n" \
-                                  f"💰 *Contado:* ${precio:,.2f}\n" \
-                                  f"💳 *Financiación:* {n_cuotas} cuotas de ${valor_cuota:,.2f}\n\n" \
-                                  f"¿Coordinamos la seña o el envío?"
-                            
-                            link = f"https://api.whatsapp.com/send?phone=549{tel_wsp.strip()}&text={urllib.parse.quote(msg)}"
-                            st.markdown(f'<meta http-equiv="refresh" content="0;url={link}">', unsafe_allow_html=True)
-                            st.success("✅ ¡Abriendo WhatsApp!")
+                nombre = str(row[col_nombre])
+                
+                # Limpiar y convertir precio
+                raw_precio = str(row[col_precio]).replace('$', '').replace('.', '').replace(',', '.').strip() if col_precio and pd.notna(row[col_precio]) else "0"
+                try:
+                    precio = float(raw_precio)
+                except:
+                    precio = 0.0
+
+                categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
+                desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
+                
+                # Extraer URL de la imagen y descripción limpia
+                img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
+                desc_limpia = desc_completa
+                if "[FOTO:" in desc_completa:
+                    partes = desc_completa.split("[FOTO:")
+                    desc_limpia = partes[0].strip()
+                    img_url = partes[1].replace("]", "").strip()
+
+                # Precio financiado
+                raw_pfin = str(row[col_pfin]).replace('$', '').replace('.', '').replace(',', '.').strip() if col_pfin and pd.notna(row[col_pfin]) else str(precio)
+                try:
+                    p_fin = float(raw_pfin)
+                except:
+                    p_fin = precio
+
+                raw_cuotas = str(row[col_cuotas]).strip() if col_cuotas and pd.notna(row[col_cuotas]) else "6"
+                try:
+                    n_cuotas = int(float(raw_cuotas))
+                except:
+                    n_cuotas = 6
+
+                valor_cuota = p_fin / n_cuotas if n_cuotas > 0 else precio
+
+                with col_actual:
+                    st.markdown(f"""
+                        <div class="ml-card">
+                            <img src="{img_url}" style="width: 100%; height: 190px; object-fit: cover; border-radius: 4px;">
+                            <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-top:8px;">{categoria}</span>
+                            <div class="ml-title">{nombre}</div>
+                            <div style="font-size:11px; color:#666; margin-bottom:6px;">{desc_limpia}</div>
+                            <div class="ml-price">$ {precio:,.2f}</div>
+                            <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    with st.expander("💬 Enviar Presupuesto WhatsApp"):
+                        tel_wsp = st.text_input("Celular cliente (ej: 3764xxxxxx)", key=f"t_{idx}")
+                        if st.button("🚀 Enviar Presupuesto", key=f"b_{idx}", use_container_width=True):
+                            if not tel_wsp.strip():
+                                st.warning("⚠️ Ingrese el número.")
+                            else:
+                                msg = f"¡Hola! 👋 Te enviamos la cotización desde *Mueblería A&G*:\n\n" \
+                                      f"🪑 *{nombre}*\n" \
+                                      f"📝 {desc_limpia}\n" \
+                                      f"💰 *Contado:* ${precio:,.2f}\n" \
+                                      f"💳 *Financiación:* {n_cuotas} cuotas de ${valor_cuota:,.2f}\n\n" \
+                                      f"¿Coordinamos la seña o el envío?"
+                                
+                                link = f"https://api.whatsapp.com/send?phone=549{tel_wsp.strip()}&text={urllib.parse.quote(msg)}"
+                                st.markdown(f'<meta http-equiv="refresh" content="0;url={link}">', unsafe_allow_html=True)
+                                st.success("✅ ¡Abriendo WhatsApp!")
     else:
-        st.info("📌 Tu tabla MUEBLES está vacía o se están cargando los primeros registros.")
+        st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
 else:
     st.info("📌 Todavía no hay datos cargados en la hoja 'MUEBLES'. Utiliza el panel izquierdo para dar de alta tu primer artículo.")
