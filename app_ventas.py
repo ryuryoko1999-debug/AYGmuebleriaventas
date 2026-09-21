@@ -66,13 +66,13 @@ SHEET_ID = "1Jw1ZtYGdAx2BLB9yxgmbZ7F4yc4Pka32bIa2XtxtSHw"
 GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
-# ⚠️ REEMPLAZA ESTA URL CON TU URL REAL DE APPS SCRIPT QUE TERMINA EN /exec
+# ⚠️ PEGA TU URL DE APPS SCRIPT AQUí (la que termina en /exec)
 SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_qUyQG_xK3AltPc9J_iEHWkFwskoyfAeZBg_DvRqnMLokCdEY/exec"
 
-# --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTO ---
+# --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTOS MÚLTIPLES ---
 with st.sidebar:
     st.markdown("<h2>➕ Registrar Nuevo Mueble</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:12px; color:#666;'>Sube la foto principal y carga los datos del artículo.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:12px; color:#666;'>Sube una o varias fotos. El sistema creará una carpeta exclusiva en tu Drive.</p>", unsafe_allow_html=True)
     
     with st.form("form_nuevo_articulo", clear_on_submit=True):
         nombre_mueble = st.text_input("Nombre del Mueble")
@@ -85,23 +85,26 @@ with st.sidebar:
         interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 30.0, 10.0, 1.0)
         
         precio_financiado = precio_contado * (1 + (interes_est / 100))
-        foto_file = st.file_uploader("Foto Principal", type=["jpg", "jpeg", "png"])
         
-        btn_publicar = st.form_submit_button("💾 Guardar Mueble en la Nube", use_container_width=True)
+        # Selector múltiple de archivos de imagen
+        fotos_files = st.file_uploader("Seleccionar Fotos del Mueble (puedes subir varias)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        
+        btn_publicar = st.form_submit_button("💾 Crear Carpeta y Guardar en Nube", use_container_width=True)
         
         if btn_publicar:
             if not nombre_mueble.strip():
                 st.error("⚠️ El nombre es obligatorio.")
             else:
-                img_base64 = ""
-                mime_type = "image/jpeg"
-                nombre_archivo = "mueble_default.jpg"
-                
-                if foto_file is not None:
-                    img_bytes = foto_file.read()
-                    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
-                    mime_type = foto_file.type
-                    nombre_archivo = foto_file.name
+                lista_imagenes = []
+                if fotos_files:
+                    for f in fotos_files:
+                        img_bytes = f.read()
+                        b64_str = base64.b64encode(img_bytes).decode('utf-8')
+                        lista_imagenes.append({
+                            "base64": b64_str,
+                            "mimeType": f.type,
+                            "nombre": f.name
+                        })
 
                 payload = {
                     "action": "agregar_mueble",
@@ -112,17 +115,15 @@ with st.sidebar:
                     "descripcion": descripcion.strip(),
                     "precioFinanciado": round(precio_financiado, 2),
                     "cantCuotas": cant_cuotas,
-                    "imagenBase64": img_base64,
-                    "mimeType": mime_type,
-                    "nombreArchivo": nombre_archivo
+                    "imagenes": lista_imagenes
                 }
 
                 if "script.google.com" in SCRIPT_URL_MUEBLES:
                     try:
-                        res = requests.post(SCRIPT_URL_MUEBLES, data=json.dumps(payload), timeout=25)
+                        res = requests.post(SCRIPT_URL_MUEBLES, data=json.dumps(payload), timeout=35)
                         resultado = res.json()
                         if resultado.get("status") == "OK":
-                            st.success("🎉 ¡Mueble guardado y foto subida a Google Drive!")
+                            st.success("🎉 ¡Carpeta creada en Drive con sus fotos y mueble guardado!")
                             st.cache_data.clear()
                             st.rerun()
                         else:
@@ -197,12 +198,18 @@ if df_muebles is not None and not df_muebles.empty:
                 categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
                 desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
                 
-                img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
+                # Extracción de URL de la carpeta de Drive o imagen por defecto
+                url_drive_mueble = "https://drive.google.com"
                 desc_limpia = desc_completa
-                if "[FOTO:" in desc_completa:
+                if "[DRIVE_CARPETA:" in desc_completa:
+                    partes = desc_completa.split("[DRIVE_CARPETA:")
+                    desc_limpia = partes[0].strip()
+                    url_drive_mueble = partes[1].replace("]", "").strip()
+                elif "[FOTO:" in desc_completa:
+                    # Compatibilidad con registros anteriores
                     partes = desc_completa.split("[FOTO:")
                     desc_limpia = partes[0].strip()
-                    img_url = partes[1].replace("]", "").strip()
+                    url_drive_mueble = partes[1].replace("]", "").strip()
 
                 raw_pfin = str(row[col_pfin]).replace('$', '').replace('.', '').replace(',', '.').strip() if col_pfin and pd.notna(row[col_pfin]) else str(precio)
                 try:
@@ -221,19 +228,18 @@ if df_muebles is not None and not df_muebles.empty:
                 with col_actual:
                     st.markdown(f"""
                         <div class="ml-card">
-                            <img src="{img_url}" style="width: 100%; height: 190px; object-fit: cover; border-radius: 4px;">
-                            <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-top:8px;">{categoria}</span>
+                            <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">{categoria}</span>
                             <div class="ml-title">{nombre}</div>
-                            <div style="font-size:11px; color:#666; margin-bottom:6px;">{desc_limpia}</div>
+                            <div style="font-size:11px; color:#666; margin-bottom:6px; height:35px; overflow:hidden;">{desc_limpia}</div>
                             <div class="ml-price">$ {precio:,.2f}</div>
                             <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # Botón directo para abrir el Drive con las imágenes del producto en una pestaña nueva
+                    # Botón directo para abrir la carpeta exclusiva de Google Drive del mueble
                     st.markdown(f"""
-                        <a href="{img_url}" target="_blank" style="display: block; width: 100%; background-color: #0073e6; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: -8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            📁 Ver Fotos en Google Drive
+                        <a href="{url_drive_mueble}" target="_blank" style="display: block; width: 100%; background-color: #0073e6; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: -8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            📁 Abrir Carpeta Google Drive (Fotos)
                         </a>
                     """, unsafe_allow_html=True)
     else:
