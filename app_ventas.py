@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales unificados estilo Mercado Libre
+# Estilos visuales limpios, profesionales y sin bordes extraños
 st.markdown("""
     <style>
     .stApp {
@@ -38,7 +38,6 @@ st.markdown("""
         width: 100%;
         height: 180px;
         object-fit: cover;
-        border-bottom: 1px solid #eee;
     }
     .ml-content {
         padding: 14px;
@@ -67,6 +66,21 @@ st.markdown("""
         color: #00a650;
         font-weight: 600;
         margin-top: 4px;
+    }
+    /* Ocultamos bordes de botones estándar para que el diseño sea fluido */
+    div.stButton > button {
+        width: 100%;
+        background-color: transparent;
+        color: #3483fa;
+        border: 1px solid #3483fa;
+        border-radius: 6px;
+        font-weight: bold;
+        padding: 6px 0;
+        transition: 0.2s;
+    }
+    div.stButton > button:hover {
+        background-color: #3483fa;
+        color: white;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -296,8 +310,22 @@ else:
                     precio_anterior = precio * 1.30  # 30% más caro tachado
 
                     with col_actual:
-                        # Creamos una tarjeta unificada interactiva utilizando un botón invisible sobre la tarjeta o un botón dedicado que envuelve la tarjeta
-                        if st.button("Ver Detalle", key=f"card_click_{idx}", use_container_width=True, help="Haz clic para ver la descripción completa"):
+                        # Renderizamos la tarjeta unificada en HTML limpio y estético
+                        st.markdown(f"""
+                            <div class="ml-card">
+                                <img src="{img_url}" class="ml-img">
+                                <div class="ml-content">
+                                    <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">{categoria}</span>
+                                    <div class="ml-title">{nombre}</div>
+                                    <div class="price-old">$ {precio_anterior:,.2f}</div>
+                                    <div class="ml-price">$ {precio:,.2f}</div>
+                                    <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Botón limpio debajo de la tarjeta que activa la apertura de la descripción completa
+                        if st.button(f"🔍 Ver Detalle", key=f"btn_ver_{idx}", use_container_width=True):
                             st.session_state.producto_seleccionado = {
                                 "nombre": nombre,
                                 "categoria": categoria,
@@ -310,20 +338,6 @@ else:
                                 "url_drive": url_drive_carpeta
                             }
                             st.rerun()
-
-                        # Renderizamos la tarjeta unificada visualmente justo debajo del botón clickeable
-                        st.markdown(f"""
-                            <div class="ml-card" style="margin-top: -46px; pointer-events: none;">
-                                <img src="{img_url}" class="ml-img">
-                                <div class="ml-content">
-                                    <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">{categoria}</span>
-                                    <div class="ml-title">{nombre}</div>
-                                    <div class="price-old">$ {precio_anterior:,.2f}</div>
-                                    <div class="ml-price">$ {precio:,.2f}</div>
-                                    <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
-                                </div>
-                            </div>
-                        """, unsafe_allow_html=True)
                         
                         st.markdown("<br>", unsafe_allow_html=True)
         else:
