@@ -72,7 +72,7 @@ SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTO ---
 with st.sidebar:
     st.markdown("<h2>➕ Registrar Nuevo Mueble</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:12px; color:#666;'>Sube la foto y carga los datos para actualizar el stock al instante.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:12px; color:#666;'>Sube la foto principal y carga los datos del artículo.</p>", unsafe_allow_html=True)
     
     with st.form("form_nuevo_articulo", clear_on_submit=True):
         nombre_mueble = st.text_input("Nombre del Mueble")
@@ -85,7 +85,7 @@ with st.sidebar:
         interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 30.0, 10.0, 1.0)
         
         precio_financiado = precio_contado * (1 + (interes_est / 100))
-        foto_file = st.file_uploader("Foto del Mueble", type=["jpg", "jpeg", "png"])
+        foto_file = st.file_uploader("Foto Principal", type=["jpg", "jpeg", "png"])
         
         btn_publicar = st.form_submit_button("💾 Guardar Mueble en la Nube", use_container_width=True)
         
@@ -230,33 +230,12 @@ if df_muebles is not None and not df_muebles.empty:
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    with st.expander("💬 Opciones de Venta / Enlace"):
-                        # Enlace directo visible para que el vendedor lo copie fácil o lo abra
-                        st.text_input("🔗 Link de Google Drive (Foto):", value=img_url, key=f"link_{idx}")
-                        
-                        tel_wsp = st.text_input("Celular cliente (ej: 3764xxxxxx)", key=f"t_{idx}")
-                        
-                        if tel_wsp.strip():
-                            # Mensaje que incluye la foto de Drive y todo el desglose financiero
-                            msg = f"¡Hola! 👋 Te enviamos la cotización oficial desde *Mueblería A&G*:\n\n" \
-                                  f"🪑 *{nombre}*\n" \
-                                  f"📝 {desc_limpia}\n\n" \
-                                  f"🖼️ *Fotos en alta calidad (Google Drive):*\n{img_url}\n\n" \
-                                  f"💰 *Precio Contado:* ${precio:,.2f}\n" \
-                                  f"💳 *Plan de Financiación:* \n" \
-                                  f"• {n_cuotas} cuotas de *${valor_cuota:,.2f}*\n" \
-                                  f"• Total Financiado: ${p_fin:,.2f}\n\n" \
-                                  f"¿Te gustaría coordinar la seña o la entrega?"
-                            
-                            link_wsp = f"https://api.whatsapp.com/send?phone=549{tel_wsp.strip()}&text={urllib.parse.quote(msg)}"
-                            
-                            st.markdown(f"""
-                                <a href="{link_wsp}" target="_blank" style="display: block; width: 100%; background-color: #25d366; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    🚀 Enviar Presupuesto + Link por WhatsApp
-                                </a>
-                            """, unsafe_allow_html=True)
-                        else:
-                            st.caption("⚠️ Ingresa el celular para armar el WhatsApp con el link.")
+                    # Botón directo para abrir el Drive con las imágenes del producto en una pestaña nueva
+                    st.markdown(f"""
+                        <a href="{img_url}" target="_blank" style="display: block; width: 100%; background-color: #0073e6; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: -8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            📁 Ver Fotos en Google Drive
+                        </a>
+                    """, unsafe_allow_html=True)
     else:
         st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
 else:
