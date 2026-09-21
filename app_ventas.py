@@ -61,14 +61,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Enlaces a tu Google Sheet "MUEBLES"
+# --- CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ---
+# El ID de tu planilla extraído de tu enlace compartido:
 SHEET_ID = "1Jw1ZtYGdAx2BLB9yxgmbZ7F4yc4Pka32bIa2XtxtSHw"
 GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
-# ⚠️ TU URL DE APPS SCRIPT DE LA PLANILLA MUEBLES
+# ⚠️ PEGA AQUÍ LA URL DE TU APPS SCRIPT DE LA PLANILLA MUEBLES (la que termina en /exec)
 SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
-
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTO ---
 with st.sidebar:
     st.markdown("<h2>➕ Registrar Nuevo Mueble</h2>", unsafe_allow_html=True)
