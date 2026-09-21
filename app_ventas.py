@@ -77,7 +77,7 @@ GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
 # ⚠️ PEGA TU URL DE APPS SCRIPT AQUÍ (la que termina en /exec)
-SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
+SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_qUyQG_xK3AltPc9J_iEHWkFwskoyfAeZBg_DvRqnMLokCdEY/exec"
 
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE ---
 with st.sidebar:
