@@ -1,40 +1,39 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
-from datetime import datetime
+from PIL import Image
 
-# Configuración de página estilo E-commerce
+# Configuración limpia estilo E-commerce móvil
 st.set_page_config(
-    page_title="A&G Ventas - Catálogo Oficial",
+    page_title="A&G Ventas",
     page_icon="🛍️",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS tipo Mercado Libre / Mercado Pago (Fondo limpio, azul corporativo y naranja A&G)
+# Estilos minimalistas tipo Mercado Libre (Blanco, gris suave y azul corporativo)
 st.markdown("""
     <style>
     .stApp {
-        background-color: #f5f6f8;
+        background-color: #ededed;
         color: #333333;
     }
-    .product-card {
+    .card {
         background-color: #ffffff;
-        padding: 16px;
+        padding: 12px;
         border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 16px;
-        border: 1px solid #e0e0e0;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        margin-bottom: 12px;
     }
-    .price-tag {
-        font-size: 24px;
-        font-weight: bold;
-        color: #333333;
+    .price {
+        font-size: 22px;
+        font-weight: 700;
+        color: #2d3238;
     }
     .installments {
         color: #00a650;
-        font-weight: bold;
-        font-size: 14px;
+        font-weight: 600;
+        font-size: 13px;
     }
     .stButton>button {
         background-color: #3483fa;
@@ -42,153 +41,139 @@ st.markdown("""
         border-radius: 6px;
         font-weight: bold;
         border: none;
-        height: 42px;
+        height: 40px;
     }
     .stButton>button:hover {
         background-color: #2968c8;
         color: white;
     }
-    .whatsapp-btn>button {
-        background-color: #25d366 !important;
-        color: white !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- CABECERA ---
-st.markdown("<h2 style='text-align: center; color: #333333;'>🛍️ A&G VENTAS PRO</h2>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #666;'>Canal Exclusivo para Equipo de Ventas</p>", unsafe_allow_html=True)
-st.markdown("---")
+# Título minimalista
+st.markdown("<h3 style='text-align: center; margin-bottom: 0; color: #333;'>🛍️ A&G VENTAS</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #666; font-size: 13px;'>Canal Exclusivo Comercial</p>", unsafe_allow_html=True)
 
-# --- BASE DE DATOS DE PRODUCTOS (Se puede conectar a Google Sheets) ---
-# Simulamos un inventario inicial o leemos de una pestaña "catalogo" de tu Google Sheet
+# Memoria de productos
 if "productos" not in st.session_state:
     st.session_state["productos"] = [
-        {"nombre": "Mesa Estilo Industrial 1.60m", "precio": 350000.0, "categoria": "Muebles", "img": "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?auto=format&fit=crop&w=600&q=80", "desc": "Estructura de hierro robusta y madera listonada."},
-        {"nombre": "Juego de Sillas X x4 unidades", "precio": 220000.0, "categoria": "Muebles", "img": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80", "desc": "Ergonómicas, tapizado talampaya reforzado."},
-        {"nombre": "Ropero 3 Puertas Corredizas", "precio": 580000.0, "categoria": "Muebles", "img": "https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=600&q=80", "desc": "Melamina de primera calidad con perfilería de aluminio."},
-        {"nombre": "Portón Corredizo Metálico a Medida", "precio": 750000.0, "categoria": "A.J Gestión Urbana", "img": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80", "desc": "Trabajo pesado en herrería con diseño moderno."}
+        {
+            "nombre": "Mesa Industrial 1.60m",
+            "precio": 350000.0,
+            "img": "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?auto=format&fit=crop&w=600&q=80",
+            "desc": "Hierro y madera listonada."
+        },
+        {
+            "nombre": "Juego Sillas Tapizadas x4",
+            "precio": 220000.0,
+            "img": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80",
+            "desc": "Estructura reforzada."
+        }
     ]
 
-# --- NAVEGACIÓN RÁPIDA (PESTAÑAS) ---
-tab_catalogo, tab_calculadora, tab_cargar = st.tabs(["🛒 Catálogo", "🧮 Simulador de Cuotas", "➕ Nuevo Producto"])
+# Pestañas limpias
+tab_shop, tab_calc, tab_add = st.tabs(["🛒 Catálogo", "🧮 Simular Cuotas", "➕ Nuevo Mueble"])
 
 # ==========================================
-# 1. CATÁLOGO TIPO MERCADO LIBRE
+# 1. CATÁLOGO RÁPIDO
 # ==========================================
-with tab_catalogo:
-    busqueda = st.text_input("🔍 Buscar producto...", placeholder="Ej: Mesa, Silla, Portón...")
+with tab_shop:
+    buscar = st.text_input("🔍 Buscar mueble...", placeholder="Ej: Mesa, Silla...")
     
-    # Filtro de búsqueda
-    productos_filtrados = [
-        p for p in st.session_state["productos"] 
-        if busqueda.lower() in p["nombre"].lower() or busqueda.lower() in p["categoria"].lower()
-    ]
+    filtrados = [p for p in st.session_state["productos"] if buscar.lower() in p["nombre"].lower()]
 
-    for idx, prod in enumerate(productos_filtrados):
+    for i, prod in enumerate(filtrados):
         with st.container():
-            st.markdown(f"""
-                <div class="product-card">
-                    <img src="{prod['img']}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 6px;">
-                    <h4 style="margin: 10px 0 5px 0; color: #111;">{prod['nombre']}</h4>
-                    <p style="color: #666; font-size: 13px; margin-bottom: 8px;">{prod['desc']}</p>
-                    <div class="price-tag">$ {prod['precio']:,.2f}</div>
-                    <div class="installments">⚡ En hasta 12 cuotas sin interés con tarjetas seleccionadas</div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="card">', unsafe_allow_html=True)
             
-            # Botón rápido para enviar presupuesto de este producto por WhatsApp
-            tel_cliente = st.text_input(f"Celular del cliente (Ej: 3764XXXXXX)", key=f"tel_{idx}")
-            if st.button(f"💬 Enviar Presupuesto por WhatsApp", key=f"btn_wsp_{idx}", use_container_width=True):
-                if not tel_cliente.strip():
-                    st.warning("⚠️ Ingresa el número del cliente.")
+            # Mostrar imagen (sea URL o archivo subido)
+            st.image(prod["img"], use_container_width=True)
+            
+            st.markdown(f"**{prod['nombre']}**")
+            st.markdown(f"<span style='color: #666; font-size: 12px;'>{prod['desc']}</span>", unsafe_allow_html=True)
+            st.markdown(f'<div class="price">$ {prod["precio"]:,.2f}</div>', unsafe_allow_html=True)
+            st.markdown('<div class="installments">⚡ 3 y 6 cuotas disponibles</div>', unsafe_allow_html=True)
+            
+            # Envío rápido por WhatsApp
+            tel = st.text_input("Celular del cliente (ej: 3764xxxxxx)", key=f"t_{i}")
+            if st.button("💬 Enviar Presupuesto por WhatsApp", key=f"b_{i}", use_container_width=True):
+                if not tel.strip():
+                    st.warning("⚠️ Ingresa el número.")
                 else:
-                    texto_wsp = f"¡Hola! 👋 Te enviamos la cotización desde *Mueblería A&G*:\n\n" \
-                                f"🪑 *{prod['nombre']}*\n" \
-                                f"📝 {prod['desc']}\n" \
-                                f"💰 *Precio Contado / Efectivo:* ${prod['precio']:,.2f}\n\n" \
-                                f"¿Te gustaría coordinar la seña o ver opciones de financiación?"
-                    
-                    url_wsp = f"https://api.whatsapp.com/send?phone=549{tel_cliente.strip()}&text={urllib.parse.quote(texto_wsp)}"
-                    st.markdown(f'<meta http-equiv="refresh" content="0;url={url_wsp}">', unsafe_allow_html=True)
-                    st.success("✅ ¡Abriendo WhatsApp con el presupuesto listo!")
-            st.markdown("---")
+                    msg = f"¡Hola! 👋 Te enviamos la cotización de *Mueblería A&G*:\n\n🪑 *{prod['nombre']}*\n💰 *Precio Contado:* ${prod['precio']:,.2f}\n\n¿Coordinamos la seña?"
+                    link = f"https://api.whatsapp.com/send?phone=549{tel.strip()}&text={urllib.parse.quote(msg)}"
+                    st.markdown(f'<meta http-equiv="refresh" content="0;url={link}">', unsafe_allow_html=True)
+                    st.success("✅ ¡Abriendo WhatsApp!")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 2. SIMULADOR DE CUOTAS (ESTILO MP)
+# 2. SIMULADOR DE CUOTAS EXPRESS
 # ==========================================
-with tab_calculadora:
-    st.subheader("🧮 Simulador de Financiación")
+with tab_calc:
+    st.subheader("🧮 Calcular Cuotas")
     
-    # Seleccionar producto o ingresar monto libre
-    nombres_prods = [p["nombre"] for p in st.session_state["productos"]] + ["Otro (Monto Libre)"]
-    prod_elegido = st.selectbox("Seleccionar Producto", options=nombres_prods)
+    nombres = [p["nombre"] for p in st.session_state["productos"]] + ["Monto Libre"]
+    elegido = st.selectbox("Producto", options=nombres)
     
-    if prod_elegido == "Otro (Monto Libre)":
-        monto_base = st.number_input("Monto Total del Mueble / Servicio ($)", min_value=1000.0, value=300000.0, step=10000.0)
+    if elegido == "Monto Libre":
+        base = st.number_input("Monto total ($)", min_value=1000.0, value=200000.0, step=5000.0)
     else:
-        p_obj = next(p for p in st.session_state["productos"] if p["nombre"] == prod_elegido)
-        monto_base = p_obj["precio"]
-        st.info(f"Precio base seleccionado: **$ {monto_base:,.2f}**")
+        obj = next(p for p in st.session_state["productos"] if p["nombre"] == elegido)
+        base = obj["precio"]
+        st.caption(f"Precio base: $ {base:,.2f}")
 
-    col_cuotas, col_interes = st.columns(2)
-    with col_cuotas:
-        cant_cuotas = st.selectbox("Cantidad de Cuotas", options=[1, 3, 6, 9, 12, 18, 24], index=2)
-    with col_interes:
-        tasa_mensual = st.number_input("Interés Mensual Estimado (%)", min_value=0.0, value=4.0, step=0.5)
+    cuotas = st.selectbox("Plazo", options=[1, 3, 6, 9, 12], index=2)
+    interes_mensual = st.slider("Interés Mensual (%)", 0.0, 15.0, 4.0, 0.5)
 
-    # Cálculo financiero (Interés compuesto / sistema francés básico)
-    if tasa_mensual > 0:
-        i = tasa_mensual / 100
-        monto_total = monto_base * ((1 + i) ** cant_cuotas)
-    else:
-        monto_total = monto_base
-        
-    valor_cuota = monto_total / cant_cuotas
+    # Cálculo financiero simple
+    total_fin = base * ((1 + (interes_mensual / 100)) ** cuotas)
+    valor_c = total_fin / cuotas
 
     st.markdown("---")
-    st.metric(label=f"💳 Valor de cada cuota ({cant_cuotas} cuotas)", value=f"$ {valor_cuota:,.2f}")
-    st.markdown(f"**Total Financiado:** <span style='color: #00a650; font-size: 20px;'>$ {monto_total:,.2f}</span>", unsafe_allow_html=True)
+    st.metric(label=f"💳 {cuotas} Cuotas de", value=f"$ {valor_c:,.2f}")
+    st.markdown(f"**Total Financiado:** <span style='color: #00a650;'>$ {total_fin:,.2f}</span>", unsafe_allow_html=True)
 
-    tel_sim = st.text_input("Celular del Cliente para enviar simulación (Ej: 3764XXXXXX)")
+    tel_c = st.text_input("Celular del cliente para la simulación")
     if st.button("📤 Enviar Simulación por WhatsApp", use_container_width=True):
-        if not tel_sim.strip():
-            st.warning("⚠️ Ingresa el número del cliente.")
+        if not tel_c.strip():
+            st.warning("⚠️ Ingresa el número.")
         else:
-            texto_sim = f"📊 *SIMULACIÓN DE FINANCIACIÓN - MUEBLERÍA A&G*\n\n" \
-                        f"🛍️ *Concepto:* {prod_elegido}\n" \
-                        f"💰 *Total Financiado:* ${monto_total:,.2f}\n" \
-                        f"💳 *Plan:* {cant_cuotas} cuotas de ${valor_cuota:,.2f}\n\n" \
-                        f"¡Aprovecha esta financiación para renovar tus espacios!"
-            
-            url_sim = f"https://api.whatsapp.com/send?phone=549{tel_sim.strip()}&text={urllib.parse.quote(texto_sim)}"
-            st.markdown(f'<meta http-equiv="refresh" content="0;url={url_sim}">', unsafe_allow_html=True)
-            st.success("✅ ¡Abriendo WhatsApp con el plan de cuotas!")
+            msg_c = f"📊 *PLAN DE FINANCIACIÓN - A&G*\n\n🛍️ {elegido}\n💳 {cuotas} cuotas de ${valor_c:,.2f}\n💰 Total: ${total_fin:,.2f}"
+            link_c = f"https://api.whatsapp.com/send?phone=549{tel_c.strip()}&text={urllib.parse.quote(msg_c)}"
+            st.markdown(f'<meta http-equiv="refresh" content="0;url={link_c}">', unsafe_allow_html=True)
+            st.success("✅ ¡Abriendo WhatsApp!")
 
 # ==========================================
-# 3. CARGAR NUEVO PRODUCTO AL CATÁLOGO
+# 3. SUBIR NUEVO MUEBLE (CON FOTO DESDE CELU/PC)
 # ==========================================
-with tab_cargar:
-    st.subheader("➕ Agregar Producto al Catálogo")
+with tab_add:
+    st.subheader("➕ Agregar Mueble")
     
-    with st.form("form_nuevo_prod"):
-        nom_nuevo = st.text_input("Nombre del Mueble o Producto")
-        cat_nuevo = st.selectbox("Categoría", options=["Muebles", "Línea Blanca", "A.J Gestión Urbana", "Metalúrgica"])
-        precio_nuevo = st.number_input("Precio Contado ($)", min_value=1.0, value=150000.0, step=5000.0)
-        desc_nuevo = st.text_area("Descripción breve")
-        img_nuevo = st.text_input("URL de la Imagen (Opcional, deja en blanco para usar genérica)")
+    with st.form("form_add"):
+        nom = st.text_input("Nombre del Mueble")
+        precio = st.number_input("Precio Contado ($)", min_value=1.0, value=100000.0, step=5000.0)
+        desc = st.text_input("Breve descripción")
         
-        submitted = st.form_submit_button("💾 Guardar en el Catálogo")
-        if submitted:
-            if not nom_nuevo.strip():
-                st.error("⚠️ El nombre es obligatorio.")
+        # Widget para subir imagen desde el celular o computadora
+        foto_subida = st.file_uploader("Subir Foto del Mueble", type=["jpg", "png", "jpeg"])
+        
+        guardar = st.form_submit_button("💾 Guardar en Catálogo")
+        
+        if guardar:
+            if not nom.strip():
+                st.error("⚠️ Ponle un nombre al mueble.")
             else:
-                imagen_final = img_nuevo.strip() if img_nuevo.strip() else "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
+                # Si subió una foto la guardamos, sino usa una por defecto
+                if foto_subida is not None:
+                    img_path = foto_subida
+                else:
+                    img_path = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
+                
                 st.session_state["productos"].append({
-                    "nombre": nom_nuevo.strip(),
-                    "precio": precio_nuevo,
-                    "categoria": cat_nuevo,
-                    "img": imagen_final,
-                    "desc": desc_nuevo.strip()
+                    "nombre": nom.strip(),
+                    "precio": precio,
+                    "img": img_path,
+                    "desc": desc.strip()
                 })
-                st.success(f"🎉 ¡Producto **{nom_nuevo}** agregado con éxito al catálogo de ventas!")
+                st.success(f"🎉 ¡{nom} agregado con éxito al catálogo de ventas!")
