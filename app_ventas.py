@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales avanzados estilo E-commerce con efecto Hover en tarjeta e imagen interactiva
+# Estilos visuales optimizados para grilla e-commerce simétrica
 st.markdown("""
     <style>
     .stApp {
@@ -24,48 +24,50 @@ st.markdown("""
         background-color: #ffffff;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        padding: 16px;
-        margin-bottom: 8px;
+        padding: 14px;
+        margin-bottom: 15px;
         border: 1px solid #e0e0e0;
         transition: all 0.3s ease;
+        height: 100%;
     }
     .ml-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.12);
         border-color: #3483fa;
     }
     .ml-title {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
         color: #333;
-        margin: 8px 0;
-        height: 42px;
+        margin: 6px 0;
+        height: 38px;
         overflow: hidden;
     }
     .price-old {
-        font-size: 13px;
+        font-size: 12px;
         color: #999;
         text-decoration: line-through;
         margin-bottom: -4px;
     }
     .ml-price {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 400;
         color: #333;
     }
     .ml-installments {
-        font-size: 13px;
+        font-size: 12px;
         color: #00a650;
         font-weight: 600;
     }
-    /* Estilo para los botones que actúan como la imagen interactiva */
+    /* Estilo limpio para los botones de las tarjetas */
     .stButton>button {
         background-color: #3483fa;
         color: white;
         border-radius: 6px;
         font-weight: bold;
         border: none;
-        height: 38px;
+        height: 36px;
+        font-size: 13px;
     }
     .stButton>button:hover {
         background-color: #2968c8;
@@ -299,40 +301,35 @@ else:
                     precio_anterior = precio * 1.30  # 30% más caro tachado
 
                     with col_actual:
-                        # Contenedor con la tarjeta visual limpia
-                        st.markdown(f"""
-                            <div class="ml-card">
-                                <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:8px;">{categoria}</span>
-                                <div class="ml-title">{nombre}</div>
-                                <div class="price-old">$ {precio_anterior:,.2f}</div>
-                                <div class="ml-price">$ {precio:,.2f}</div>
-                                <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Imagen interactiva: al hacer clic sobre la foto, se dispara el evento y abre el detalle completo
-                        if st.button("Ver Detalle", key=f"img_btn_{idx}", help="Haz clic para ver la descripción completa", use_container_width=True):
-                            st.session_state.producto_seleccionado = {
-                                "nombre": nombre,
-                                "categoria": categoria,
-                                "precio": precio,
-                                "p_fin": p_fin,
-                                "n_cuotas": n_cuotas,
-                                "valor_cuota": valor_cuota,
-                                "desc_limpia": desc_limpia,
-                                "img_url": img_url,
-                                "url_drive": url_drive_carpeta
-                            }
-                            st.rerun()
-                        
-                        # Renderizamos la foto justo debajo del botón interactivo con la imagen
-                        st.markdown(f"""
-                            <div style="margin-top:-38px; pointer-events:none; text-align:center;">
-                                <img src="{img_url}" style="width: 100%; height: 170px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;">
-                            </div>
-                        """, unsafe_allow_html=True)
-                        
-                        st.markdown("<hr style='margin:25px 0; border:none; border-top:1px solid #e0e0e0;'>", unsafe_allow_html=True)
+                        # Estructura limpia y ordenada en un solo contenedor visual
+                        with st.container():
+                            st.markdown(f"""
+                                <div class="ml-card">
+                                    <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:6px;">{categoria}</span>
+                                    <div class="ml-title">{nombre}</div>
+                                    <div class="price-old">$ {precio_anterior:,.2f}</div>
+                                    <div class="ml-price">$ {precio:,.2f}</div>
+                                    <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Imagen interactiva: al hacer clic en la foto, abre los detalles completos
+                            if st.button("Ver Detalle", key=f"img_click_{idx}", help="Haz clic para ver la descripción completa y carpeta de fotos", use_container_width=True):
+                                st.session_state.producto_seleccionado = {
+                                    "nombre": nombre,
+                                    "categoria": categoria,
+                                    "precio": precio,
+                                    "p_fin": p_fin,
+                                    "n_cuotas": n_cuotas,
+                                    "valor_cuota": valor_cuota,
+                                    "desc_limpia": desc_limpia,
+                                    "img_url": img_url,
+                                    "url_drive": url_drive_carpeta
+                                }
+                                st.rerun()
+                            
+                            st.image(img_url, use_container_width=True)
+                            st.markdown("<br>", unsafe_allow_html=True)
         else:
             st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
     else:
