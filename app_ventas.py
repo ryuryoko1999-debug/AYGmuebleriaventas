@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import requests
@@ -135,7 +134,7 @@ with st.sidebar:
 
 # --- CUERPO PRINCIPAL: CATÁLOGO INTERNO DE VENTAS ---
 st.markdown("<h2>🛍️ A&G VENTAS PRO - Stock Disponible</h2>", unsafe_allow_html=True)
-busqueda = st.text_input("🔍 Buscar muebles en stock...", placeholder="Escribe el nombre del mueble...", label_visibility="collapsed")
+busqueda = st.text_input("🔍 Buscar muebles en stock (ej: placar, mesa, etc.)...", placeholder="Escribe para filtrar...", label_visibility="collapsed")
 st.markdown("<br>", unsafe_allow_html=True)
 
 @st.cache_data(ttl=0)
@@ -231,15 +230,18 @@ if df_muebles is not None and not df_muebles.empty:
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    with st.expander("💬 Enviar Presupuesto WhatsApp"):
+                    with st.expander("💬 Opciones de Venta / Enlace"):
+                        # Enlace directo visible para que el vendedor lo copie fácil o lo abra
+                        st.text_input("🔗 Link de Google Drive (Foto):", value=img_url, key=f"link_{idx}")
+                        
                         tel_wsp = st.text_input("Celular cliente (ej: 3764xxxxxx)", key=f"t_{idx}")
                         
                         if tel_wsp.strip():
-                            # Mensaje formateado: Foto arriba, detalles y cuotas abajo
+                            # Mensaje que incluye la foto de Drive y todo el desglose financiero
                             msg = f"¡Hola! 👋 Te enviamos la cotización oficial desde *Mueblería A&G*:\n\n" \
                                   f"🪑 *{nombre}*\n" \
                                   f"📝 {desc_limpia}\n\n" \
-                                  f"🖼️ *Foto del Mueble:* \n{img_url}\n\n" \
+                                  f"🖼️ *Fotos en alta calidad (Google Drive):*\n{img_url}\n\n" \
                                   f"💰 *Precio Contado:* ${precio:,.2f}\n" \
                                   f"💳 *Plan de Financiación:* \n" \
                                   f"• {n_cuotas} cuotas de *${valor_cuota:,.2f}*\n" \
@@ -248,14 +250,13 @@ if df_muebles is not None and not df_muebles.empty:
                             
                             link_wsp = f"https://api.whatsapp.com/send?phone=549{tel_wsp.strip()}&text={urllib.parse.quote(msg)}"
                             
-                            # Botón HTML seguro que evita bloqueos de conexión y abre WhatsApp en pestaña nueva
                             st.markdown(f"""
                                 <a href="{link_wsp}" target="_blank" style="display: block; width: 100%; background-color: #25d366; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    🚀 Abrir WhatsApp con Presupuesto
+                                    🚀 Enviar Presupuesto + Link por WhatsApp
                                 </a>
                             """, unsafe_allow_html=True)
                         else:
-                            st.caption("⚠️ Ingresa el número de celular para habilitar el botón.")
+                            st.caption("⚠️ Ingresa el celular para armar el WhatsApp con el link.")
     else:
         st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
 else:
