@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales limpios estilo Mercado Libre
+# Estilos visuales limpios estilo Mercado Libre y E-commerce
 st.markdown("""
     <style>
     .stApp {
@@ -27,6 +27,10 @@ st.markdown("""
         padding: 14px;
         margin-bottom: 16px;
         border: 1px solid #e0e0e0;
+        transition: transform 0.2s;
+    }
+    .ml-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
     .ml-title {
         font-size: 14px;
@@ -35,6 +39,12 @@ st.markdown("""
         margin: 8px 0;
         height: 40px;
         overflow: hidden;
+    }
+    .price-old {
+        font-size: 13px;
+        color: #999;
+        text-decoration: line-through;
+        margin-bottom: -4px;
     }
     .ml-price {
         font-size: 22px;
@@ -162,7 +172,7 @@ df_muebles = cargar_catalogo()
 if "producto_seleccionado" not in st.session_state:
     st.session_state.producto_seleccionado = None
 
-# Si hay un producto seleccionado, mostramos su FICHA TÉCNICA AMPLIADA tipo Mercado Libre
+# Si hay un producto seleccionado, mostramos su FICHA TÉCNICA AMPLIADA
 if st.session_state.producto_seleccionado is not None:
     p = st.session_state.producto_seleccionado
     
@@ -172,6 +182,7 @@ if st.session_state.producto_seleccionado is not None:
         
     st.markdown(f"<h1>{p['nombre']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<span style='background:#e6f0ff; color:#0073e6; padding:4px 8px; border-radius:4px; font-weight:bold;'>{p['categoria']}</span>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     
     col_img, col_info = st.columns([1.2, 1])
     
@@ -180,7 +191,7 @@ if st.session_state.producto_seleccionado is not None:
         st.markdown(f'<img src="{p["img_url"]}" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 1px solid #ddd; background: #fff; padding: 10px;">', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Botón exclusivo que abre la carpeta de Drive propia de este producto
+        # Botón directo exclusivo de la carpeta de Google Drive de ESTE mueble
         st.markdown(f"""
             <a href="{p['url_drive']}" target="_blank" style="display: block; width: 100%; background-color: #0073e6; color: white; padding: 12px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 📁 Abrir Carpeta Exclusiva en Google Drive (Ver más fotos)
@@ -188,10 +199,12 @@ if st.session_state.producto_seleccionado is not None:
         """, unsafe_allow_html=True)
         
     with col_info:
+        precio_anterior = p['precio'] * 1.30  # 30% más caro tachado
         st.markdown(f"""
             <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
                 <h3 style="margin-top:0; color:#333;">Precio Contado</h3>
-                <div style="font-size: 32px; font-weight: bold; color: #333;">$ {p['precio']:,.2f}</div>
+                <div class="price-old">$ {precio_anterior:,.2f}</div>
+                <div style="font-size: 32px; font-weight: bold; color: #333;">$ {p['precio']:,.2f} <span style="font-size:14px; background:#e5ffe5; color:#00a650; padding:2px 6px; border-radius:4px;">30% OFF</span></div>
                 <hr style="margin: 15px 0;">
                 <h4 style="color: #00a650; margin:0;">Financiación Disponible</h4>
                 <div style="font-size: 18px; font-weight: bold; color: #00a650; margin-top:5px;">
@@ -249,7 +262,7 @@ else:
                     categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
                     desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
                     
-                    # Extracción inteligente de URLs (Foto portada y Carpeta Drive exclusiva del mueble)
+                    # Extracción inteligente de URLs (Foto portada y Carpeta Drive exclusiva)
                     img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
                     url_drive_carpeta = "https://drive.google.com"
                     desc_limpia = desc_completa
@@ -282,20 +295,24 @@ else:
                         n_cuotas = 6
 
                     valor_cuota = p_fin / n_cuotas if n_cuotas > 0 else precio
+                    precio_anterior = precio * 1.30  # 30% más caro tachado
 
                     with col_actual:
+                        # Renderizamos la tarjeta en HTML limpio
                         st.markdown(f"""
                             <div class="ml-card">
-                                <img src="{img_url}" style="width: 100%; height: 180px; object-fit: cover; border-radius: 4px;">
-                                <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-top:8px;">{categoria}</span>
+                                <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:8px;">{categoria}</span>
                                 <div class="ml-title">{nombre}</div>
+                                <div class="price-old">$ {precio_anterior:,.2f}</div>
                                 <div class="ml-price">$ {precio:,.2f}</div>
                                 <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Botón intermedio para abrir la vista de detalle ampliada
-                        if st.button(f"🔍 Ver Detalle y Fotos", key=f"btn_det_{idx}", use_container_width=True):
+                        # Imagen interactiva: al hacer clic en este botón con la imagen, entra a la descripción detallada
+                        st.image(img_url, use_column_width=True)
+                        
+                        if st.button(f"🔍 Ver Detalle Completo", key=f"btn_det_{idx}", use_container_width=True):
                             st.session_state.producto_seleccionado = {
                                 "nombre": nombre,
                                 "categoria": categoria,
@@ -308,6 +325,8 @@ else:
                                 "url_drive": url_drive_carpeta
                             }
                             st.rerun()
+                        
+                        st.markdown("<hr style='margin:20px 0; border:none; border-top:1px solid #e0e0e0;'>", unsafe_allow_html=True)
         else:
             st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
     else:
