@@ -66,28 +66,27 @@ SHEET_ID = "1Jw1ZtYGdAx2BLB9yxgmbZ7F4yc4Pka32bIa2XtxtSHw"
 GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
-# ⚠️ PEGA TU URL DE APPS SCRIPT AQUí (la que termina en /exec)
+# ⚠️ PEGA TU URL DE APPS SCRIPT AQUÍ (la que termina en /exec)
 SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_qUyQG_xK3AltPc9J_iEHWkFwskoyfAeZBg_DvRqnMLokCdEY/exec"
 
-# --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTOS MÚLTIPLES ---
+# --- PANEL LATERAL: AGREGAR NUEVO MUEBLE ---
 with st.sidebar:
     st.markdown("<h2>➕ Registrar Nuevo Mueble</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:12px; color:#666;'>Sube una o varias fotos. El sistema creará una carpeta exclusiva en tu Drive.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:12px; color:#666;'>Sube fotos múltiples. La primera foto será la miniatura y se creará una carpeta en Drive.</p>", unsafe_allow_html=True)
     
     with st.form("form_nuevo_articulo", clear_on_submit=True):
         nombre_mueble = st.text_input("Nombre del Mueble")
         categoria_mueble = st.selectbox("Categoría", options=["LIVING", "COMEDOR", "DORMITORIO", "A.J GESTIÓN URBANA", "METALÚRGICA"])
         precio_contado = st.number_input("Precio Contado ($)", min_value=1.0, value=200000.0, step=5000.0)
         cantidad_stock = st.number_input("Cantidad en Stock", min_value=1, value=1, step=1)
-        descripcion = st.text_area("Descripción / Detalles")
+        descripcion = st.text_area("Descripción / Detalles Completos")
         
         cant_cuotas = st.selectbox("Cantidad de Cuotas", options=[3, 6, 9, 12], index=1)
         interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 30.0, 10.0, 1.0)
         
         precio_financiado = precio_contado * (1 + (interes_est / 100))
         
-        # Selector múltiple de archivos de imagen
-        fotos_files = st.file_uploader("Seleccionar Fotos del Mueble (puedes subir varias)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        fotos_files = st.file_uploader("Seleccionar Fotos del Mueble", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
         
         btn_publicar = st.form_submit_button("💾 Crear Carpeta y Guardar en Nube", use_container_width=True)
         
@@ -123,7 +122,7 @@ with st.sidebar:
                         res = requests.post(SCRIPT_URL_MUEBLES, data=json.dumps(payload), timeout=35)
                         resultado = res.json()
                         if resultado.get("status") == "OK":
-                            st.success("🎉 ¡Carpeta creada en Drive con sus fotos y mueble guardado!")
+                            st.success("🎉 ¡Mueble guardado con éxito!")
                             st.cache_data.clear()
                             st.rerun()
                         else:
@@ -131,18 +130,17 @@ with st.sidebar:
                     except Exception as e:
                         st.error(f"Error de conexión: {e}")
                 else:
-                    st.warning("⚠️ Debes configurar la variable `SCRIPT_URL_MUEBLES` con tu enlace real de Apps Script.")
+                    st.warning("⚠️ Configura la variable `SCRIPT_URL_MUEBLES`.")
 
-# --- CUERPO PRINCIPAL: CATÁLOGO INTERNO DE VENTAS ---
+# --- CUERPO PRINCIPAL ---
 st.markdown("<h2>🛍️ A&G VENTAS PRO - Stock Disponible</h2>", unsafe_allow_html=True)
-busqueda = st.text_input("🔍 Buscar muebles en stock (ej: placar, mesa, etc.)...", placeholder="Escribe para filtrar...", label_visibility="collapsed")
+busqueda = st.text_input("🔍 Buscar muebles en stock...", placeholder="Escribe para filtrar...", label_visibility="collapsed")
 st.markdown("<br>", unsafe_allow_html=True)
 
 @st.cache_data(ttl=0)
 def cargar_catalogo():
     try:
         df_raw = pd.read_csv(CSV_URL, header=None)
-        
         header_row_idx = None
         for idx, row in df_raw.iterrows():
             row_str = str(row.values).upper()
@@ -198,18 +196,25 @@ if df_muebles is not None and not df_muebles.empty:
                 categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
                 desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
                 
-                # Extracción de URL de la carpeta de Drive o imagen por defecto
-                url_drive_mueble = "https://drive.google.com"
+                # Extracción inteligente de URLs (Foto principal y Carpeta Drive)
+                img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
+                url_drive_carpeta = "https://drive.google.com"
                 desc_limpia = desc_completa
-                if "[DRIVE_CARPETA:" in desc_completa:
-                    partes = desc_completa.split("[DRIVE_CARPETA:")
-                    desc_limpia = partes[0].strip()
-                    url_drive_mueble = partes[1].replace("]", "").strip()
-                elif "[FOTO:" in desc_completa:
-                    # Compatibilidad con registros anteriores
+
+                if "[FOTO:" in desc_completa:
                     partes = desc_completa.split("[FOTO:")
                     desc_limpia = partes[0].strip()
-                    url_drive_mueble = partes[1].replace("]", "").strip()
+                    resto = partes[1]
+                    if "[DRIVE_CARPETA:" in resto:
+                        subpartes = resto.split("[DRIVE_CARPETA:")
+                        img_url = subpartes[0].replace("]", "").strip()
+                        url_drive_carpeta = subpartes[1].replace("]", "").strip()
+                    else:
+                        img_url = resto.replace("]", "").strip()
+                elif "[DRIVE_CARPETA:" in desc_completa:
+                    partes = desc_completa.split("[DRIVE_CARPETA:")
+                    desc_limpia = partes[0].strip()
+                    url_drive_carpeta = partes[1].replace("]", "").strip()
 
                 raw_pfin = str(row[col_pfin]).replace('$', '').replace('.', '').replace(',', '.').strip() if col_pfin and pd.notna(row[col_pfin]) else str(precio)
                 try:
@@ -226,22 +231,26 @@ if df_muebles is not None and not df_muebles.empty:
                 valor_cuota = p_fin / n_cuotas if n_cuotas > 0 else precio
 
                 with col_actual:
+                    # Tarjeta visual principal estilo E-commerce
                     st.markdown(f"""
                         <div class="ml-card">
-                            <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">{categoria}</span>
+                            <img src="{img_url}" style="width: 100%; height: 180px; object-fit: cover; border-radius: 4px;">
+                            <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-top:8px;">{categoria}</span>
                             <div class="ml-title">{nombre}</div>
-                            <div style="font-size:11px; color:#666; margin-bottom:6px; height:35px; overflow:hidden;">{desc_limpia}</div>
                             <div class="ml-price">$ {precio:,.2f}</div>
                             <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
                         </div>
                     """, unsafe_allow_html=True)
                     
-                    # Botón directo para abrir la carpeta exclusiva de Google Drive del mueble
-                    st.markdown(f"""
-                        <a href="{url_drive_mueble}" target="_blank" style="display: block; width: 100%; background-color: #0073e6; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: -8px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            📁 Abrir Carpeta Google Drive (Fotos)
-                        </a>
-                    """, unsafe_allow_html=True)
+                    # Panel desplegable para ver la descripción completa y entrar al Drive de fotos
+                    with st.expander("📖 Ver Detalle Completo y Fotos"):
+                        st.markdown(f"**Descripción detallada:**\n\n{desc_limpia}")
+                        st.markdown("---")
+                        st.markdown(f"""
+                            <a href="{url_drive_carpeta}" target="_blank" style="display: block; width: 100%; background-color: #0073e6; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                📁 Abrir Carpeta Google Drive (Ver todas las fotos)
+                            </a>
+                        """, unsafe_allow_html=True)
     else:
         st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
 else:
