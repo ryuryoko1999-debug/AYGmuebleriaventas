@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales optimizados para grilla e-commerce simétrica
+# Estilos visuales unificados estilo Mercado Libre
 st.markdown("""
     <style>
     .stApp {
@@ -24,16 +24,24 @@ st.markdown("""
         background-color: #ffffff;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        padding: 14px;
-        margin-bottom: 15px;
+        overflow: hidden;
+        margin-bottom: 20px;
         border: 1px solid #e0e0e0;
         transition: all 0.3s ease;
-        height: 100%;
     }
     .ml-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
         border-color: #3483fa;
+    }
+    .ml-img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-bottom: 1px solid #eee;
+    }
+    .ml-content {
+        padding: 14px;
     }
     .ml-title {
         font-size: 14px;
@@ -58,20 +66,7 @@ st.markdown("""
         font-size: 12px;
         color: #00a650;
         font-weight: 600;
-    }
-    /* Estilo limpio para los botones de las tarjetas */
-    .stButton>button {
-        background-color: #3483fa;
-        color: white;
-        border-radius: 6px;
-        font-weight: bold;
-        border: none;
-        height: 36px;
-        font-size: 13px;
-    }
-    .stButton>button:hover {
-        background-color: #2968c8;
-        color: white;
+        margin-top: 4px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -82,7 +77,7 @@ GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
 # ⚠️ PEGA TU URL DE APPS SCRIPT AQUÍ (la que termina en /exec)
-SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_qUyQG_xK3AltPc9J_iEHWkFwskoyfAeZBg_DvRqnMLokCdEY/exec"
+SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
 
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE ---
 with st.sidebar:
@@ -227,7 +222,7 @@ if st.session_state.producto_seleccionado is not None:
     """, unsafe_allow_html=True)
 
 else:
-    # --- CUERPO PRINCIPAL: GRILLA DE PRODUCTOS ---
+    # --- CUERPO PRINCIPAL: GRILLA DE PRODUCTOS UNIFICADOS ---
     st.markdown("<h2>🛍️ A&G VENTAS PRO - Catálogo Interactivo</h2>", unsafe_allow_html=True)
     busqueda = st.text_input("🔍 Buscar muebles en stock (ej: placar, mesa, etc.)...", placeholder="Escribe para filtrar...", label_visibility="collapsed")
     st.markdown("<br>", unsafe_allow_html=True)
@@ -301,35 +296,36 @@ else:
                     precio_anterior = precio * 1.30  # 30% más caro tachado
 
                     with col_actual:
-                        # Estructura limpia y ordenada en un solo contenedor visual
-                        with st.container():
-                            st.markdown(f"""
-                                <div class="ml-card">
-                                    <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:6px;">{categoria}</span>
+                        # Creamos una tarjeta unificada interactiva utilizando un botón invisible sobre la tarjeta o un botón dedicado que envuelve la tarjeta
+                        if st.button("Ver Detalle", key=f"card_click_{idx}", use_container_width=True, help="Haz clic para ver la descripción completa"):
+                            st.session_state.producto_seleccionado = {
+                                "nombre": nombre,
+                                "categoria": categoria,
+                                "precio": precio,
+                                "p_fin": p_fin,
+                                "n_cuotas": n_cuotas,
+                                "valor_cuota": valor_cuota,
+                                "desc_limpia": desc_limpia,
+                                "img_url": img_url,
+                                "url_drive": url_drive_carpeta
+                            }
+                            st.rerun()
+
+                        # Renderizamos la tarjeta unificada visualmente justo debajo del botón clickeable
+                        st.markdown(f"""
+                            <div class="ml-card" style="margin-top: -46px; pointer-events: none;">
+                                <img src="{img_url}" class="ml-img">
+                                <div class="ml-content">
+                                    <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:4px;">{categoria}</span>
                                     <div class="ml-title">{nombre}</div>
                                     <div class="price-old">$ {precio_anterior:,.2f}</div>
                                     <div class="ml-price">$ {precio:,.2f}</div>
                                     <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
                                 </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Imagen interactiva: al hacer clic en la foto, abre los detalles completos
-                            if st.button("Ver Detalle", key=f"img_click_{idx}", help="Haz clic para ver la descripción completa y carpeta de fotos", use_container_width=True):
-                                st.session_state.producto_seleccionado = {
-                                    "nombre": nombre,
-                                    "categoria": categoria,
-                                    "precio": precio,
-                                    "p_fin": p_fin,
-                                    "n_cuotas": n_cuotas,
-                                    "valor_cuota": valor_cuota,
-                                    "desc_limpia": desc_limpia,
-                                    "img_url": img_url,
-                                    "url_drive": url_drive_carpeta
-                                }
-                                st.rerun()
-                            
-                            st.image(img_url, use_container_width=True)
-                            st.markdown("<br>", unsafe_allow_html=True)
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown("<br>", unsafe_allow_html=True)
         else:
             st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
     else:
