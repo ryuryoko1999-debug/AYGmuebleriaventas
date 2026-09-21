@@ -77,7 +77,7 @@ GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
 # ⚠️ PEGA TU URL DE APPS SCRIPT AQUÍ (la que termina en /exec)
-SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_qUyQG_xK3AltPc9J_iEHWkFwskoyfAeZBg_DvRqnMLokCdEY/exec"
+SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
 
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE ---
 with st.sidebar:
@@ -262,7 +262,6 @@ else:
                     categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
                     desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
                     
-                    # Extracción inteligente de URLs (Foto portada y Carpeta Drive exclusiva)
                     img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
                     url_drive_carpeta = "https://drive.google.com"
                     desc_limpia = desc_completa
@@ -298,7 +297,6 @@ else:
                     precio_anterior = precio * 1.30  # 30% más caro tachado
 
                     with col_actual:
-                        # Renderizamos la tarjeta en HTML limpio
                         st.markdown(f"""
                             <div class="ml-card">
                                 <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:8px;">{categoria}</span>
@@ -309,8 +307,8 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Imagen interactiva: al hacer clic en este botón con la imagen, entra a la descripción detallada
-                        st.image(img_url, use_column_width=True)
+                        # Imagen interactiva compatible con la versión actual de Streamlit
+                        st.image(img_url, use_container_width=True)
                         
                         if st.button(f"🔍 Ver Detalle Completo", key=f"btn_det_{idx}", use_container_width=True):
                             st.session_state.producto_seleccionado = {
