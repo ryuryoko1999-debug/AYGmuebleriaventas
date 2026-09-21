@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos visuales avanzados estilo E-commerce con efecto Hover en tarjeta
+# Estilos visuales avanzados estilo E-commerce con efecto Hover en tarjeta e imagen interactiva
 st.markdown("""
     <style>
     .stApp {
@@ -25,10 +25,9 @@ st.markdown("""
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         padding: 16px;
-        margin-bottom: 16px;
+        margin-bottom: 8px;
         border: 1px solid #e0e0e0;
         transition: all 0.3s ease;
-        cursor: pointer;
     }
     .ml-card:hover {
         transform: translateY(-5px);
@@ -59,6 +58,7 @@ st.markdown("""
         color: #00a650;
         font-weight: 600;
     }
+    /* Estilo para los botones que actúan como la imagen interactiva */
     .stButton>button {
         background-color: #3483fa;
         color: white;
@@ -299,7 +299,7 @@ else:
                     precio_anterior = precio * 1.30  # 30% más caro tachado
 
                     with col_actual:
-                        # Tarjeta con efectos de sombra y hover
+                        # Contenedor con la tarjeta visual limpia
                         st.markdown(f"""
                             <div class="ml-card">
                                 <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-bottom:8px;">{categoria}</span>
@@ -310,10 +310,8 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        st.image(img_url, use_container_width=True)
-                        
-                        # Al hacer clic en este botón principal de la tarjeta, se despliega toda la descripción detallada
-                        if st.button(f"🔍 Ver Detalle y Descripción", key=f"btn_det_{idx}", use_container_width=True):
+                        # Imagen interactiva: al hacer clic sobre la foto, se dispara el evento y abre el detalle completo
+                        if st.button("Ver Detalle", key=f"img_btn_{idx}", help="Haz clic para ver la descripción completa", use_container_width=True):
                             st.session_state.producto_seleccionado = {
                                 "nombre": nombre,
                                 "categoria": categoria,
@@ -327,7 +325,14 @@ else:
                             }
                             st.rerun()
                         
-                        st.markdown("<hr style='margin:20px 0; border:none; border-top:1px solid #e0e0e0;'>", unsafe_allow_html=True)
+                        # Renderizamos la foto justo debajo del botón interactivo con la imagen
+                        st.markdown(f"""
+                            <div style="margin-top:-38px; pointer-events:none; text-align:center;">
+                                <img src="{img_url}" style="width: 100%; height: 170px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;">
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown("<hr style='margin:25px 0; border:none; border-top:1px solid #e0e0e0;'>", unsafe_allow_html=True)
         else:
             st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
     else:
