@@ -232,10 +232,30 @@ if df_muebles is not None and not df_muebles.empty:
                     
                     with st.expander("💬 Enviar Presupuesto WhatsApp"):
                         tel_wsp = st.text_input("Celular cliente (ej: 3764xxxxxx)", key=f"t_{idx}")
-                        if st.button("🚀 Enviar Presupuesto", key=f"b_{idx}", use_container_width=True):
-                            if not tel_wsp.strip():
-                                st.warning("⚠️ Ingrese el número.")
-                            else:
+                        
+                        if tel_wsp.strip():
+                            # Generamos el mensaje formateado con la foto y cuotas abajo
+                            msg = f"¡Hola! 👋 Te enviamos la cotización oficial desde *Mueblería A&G*:\n\n" \
+                                  f"🪑 *{nombre}*\n" \
+                                  f"📝 {desc_limpia}\n\n" \
+                                  f"🖼️ *Foto del Mueble:* \n{img_url}\n\n" \
+                                  f"💰 *Precio Contado:* ${precio:,.2f}\n" \
+                                  f"💳 *Plan de Financiación:* \n" \
+                                  f"• {n_cuotas} cuotas de *${valor_cuota:,.2f}*\n" \
+                                  f"• Total Financiado: ${p_fin:,.2f}\n\n" \
+                                  f"¿Te gustaría coordinar la seña o la entrega?"
+                            
+                            # Enlace oficial directo para WhatsApp
+                            link_wsp = f"https://api.whatsapp.com/send?phone=549{tel_wsp.strip()}&text={urllib.parse.quote(msg)}"
+                            
+                            # Botón HTML con estilo corporativo que abre WhatsApp en una pestaña nueva sin bloqueos
+                            st.markdown(f"""
+                                <a href="{link_wsp}" target="_blank" style="display: block; width: 100%; background-color: #25d366; color: white; padding: 10px 0; text-align: center; border-radius: 6px; font-weight: bold; text-decoration: none; margin-top: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    🚀 Abrir WhatsApp con Presupuesto
+                                </a>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.caption("⚠️ Ingresa el número de celular para habilitar el envío.")
                                 msg = f"¡Hola! 👋 Te enviamos la cotización oficial desde *Mueblería A&G*:\n\n" \
                                       f"🪑 *{nombre}*\n" \
                                       f"📝 {desc_limpia}\n\n" \
