@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import requests
@@ -62,13 +63,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- CONFIGURACIÓN DE ACCESO A GOOGLE SHEETS ---
-# El ID de tu planilla extraído de tu enlace compartido:
 SHEET_ID = "1Jw1ZtYGdAx2BLB9yxgmbZ7F4yc4Pka32bIa2XtxtSHw"
 GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
-# ⚠️ PEGA AQUÍ LA URL DE TU APPS SCRIPT DE LA PLANILLA MUEBLES (la que termina en /exec)
+# ⚠️ REEMPLAZA ESTA URL CON TU URL REAL DE APPS SCRIPT QUE TERMINA EN /exec
 SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
+
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTO ---
 with st.sidebar:
     st.markdown("<h2>➕ Registrar Nuevo Mueble</h2>", unsafe_allow_html=True)
@@ -130,7 +131,7 @@ with st.sidebar:
                     except Exception as e:
                         st.error(f"Error de conexión: {e}")
                 else:
-                    st.warning("⚠️ Configura la variable `SCRIPT_URL_MUEBLES`.")
+                    st.warning("⚠️ Debes configurar la variable `SCRIPT_URL_MUEBLES` con tu enlace real de Apps Script.")
 
 # --- CUERPO PRINCIPAL: CATÁLOGO INTERNO DE VENTAS ---
 st.markdown("<h2>🛍️ A&G VENTAS PRO - Stock Disponible</h2>", unsafe_allow_html=True)
@@ -140,7 +141,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 @st.cache_data(ttl=0)
 def cargar_catalogo():
     try:
-        # Leemos el CSV completo y buscamos dinámicamente la fila de encabezados
         df_raw = pd.read_csv(CSV_URL, header=None)
         
         header_row_idx = None
@@ -155,7 +155,6 @@ def cargar_catalogo():
             df.columns = [str(c).strip().upper() for c in df.columns]
             return df
         else:
-            # Fallback por si está en la fila por defecto
             df = pd.read_csv(CSV_URL, header=0)
             df.columns = [str(c).strip().upper() for c in df.columns]
             return df
@@ -166,7 +165,6 @@ def cargar_catalogo():
 df_muebles = cargar_catalogo()
 
 if df_muebles is not None and not df_muebles.empty:
-    # Identificar columnas con flexibilidad
     col_nombre = next((c for c in df_muebles.columns if "NOMBRE" in c), None)
     col_precio = next((c for c in df_muebles.columns if c == "PRECIO" or "PRECIO" in c), None)
     col_cat = next((c for c in df_muebles.columns if "CATEGORIA" in c), None)
@@ -176,8 +174,6 @@ if df_muebles is not None and not df_muebles.empty:
 
     if col_nombre:
         df_valid = df_muebles.dropna(subset=[col_nombre]).copy()
-        
-        # Filtrar filas vacías o de prueba
         df_valid = df_valid[~df_valid[col_nombre].astype(str).str.upper().isin(['NAN', 'NONE', '', 'NOMBRE'])]
 
         if busqueda:
@@ -193,7 +189,6 @@ if df_muebles is not None and not df_muebles.empty:
                 
                 nombre = str(row[col_nombre])
                 
-                # Limpiar y convertir precio
                 raw_precio = str(row[col_precio]).replace('$', '').replace('.', '').replace(',', '.').strip() if col_precio and pd.notna(row[col_precio]) else "0"
                 try:
                     precio = float(raw_precio)
@@ -203,7 +198,6 @@ if df_muebles is not None and not df_muebles.empty:
                 categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
                 desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
                 
-                # Extraer URL de la imagen y descripción limpia
                 img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
                 desc_limpia = desc_completa
                 if "[FOTO:" in desc_completa:
@@ -211,7 +205,6 @@ if df_muebles is not None and not df_muebles.empty:
                     desc_limpia = partes[0].strip()
                     img_url = partes[1].replace("]", "").strip()
 
-                # Precio financiado
                 raw_pfin = str(row[col_pfin]).replace('$', '').replace('.', '').replace(',', '.').strip() if col_pfin and pd.notna(row[col_pfin]) else str(precio)
                 try:
                     p_fin = float(raw_pfin)
