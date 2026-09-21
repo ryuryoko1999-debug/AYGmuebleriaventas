@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import requests
@@ -68,7 +67,7 @@ GID = "0"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
 # ⚠️ REEMPLAZA ESTA URL CON TU URL REAL DE APPS SCRIPT QUE TERMINA EN /exec
-SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/AKfycbw3OPwzlrzvi-2zkX_qUyQG_xK3AltPc9J_iEHWkFwskoyfAeZBg_DvRqnMLokCdEY/exec"
+SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
 
 # --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTO ---
 with st.sidebar:
@@ -83,7 +82,7 @@ with st.sidebar:
         descripcion = st.text_area("Descripción / Detalles")
         
         cant_cuotas = st.selectbox("Cantidad de Cuotas", options=[3, 6, 9, 12], index=1)
-        interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 150.0, 10.0, 1.0)
+        interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 30.0, 10.0, 1.0)
         
         precio_financiado = precio_contado * (1 + (interes_est / 100))
         foto_file = st.file_uploader("Foto del Mueble", type=["jpg", "jpeg", "png"])
@@ -237,16 +236,19 @@ if df_muebles is not None and not df_muebles.empty:
                             if not tel_wsp.strip():
                                 st.warning("⚠️ Ingrese el número.")
                             else:
-                                msg = f"¡Hola! 👋 Te enviamos la cotización desde *Mueblería A&G*:\n\n" \
+                                msg = f"¡Hola! 👋 Te enviamos la cotización oficial desde *Mueblería A&G*:\n\n" \
                                       f"🪑 *{nombre}*\n" \
-                                      f"📝 {desc_limpia}\n" \
-                                      f"💰 *Contado:* ${precio:,.2f}\n" \
-                                      f"💳 *Financiación:* {n_cuotas} cuotas de ${valor_cuota:,.2f}\n\n" \
-                                      f"¿Coordinamos la seña o el envío?"
+                                      f"📝 {desc_limpia}\n\n" \
+                                      f"🖼️ *Foto del Mueble:* \n{img_url}\n\n" \
+                                      f"💰 *Precio Contado:* ${precio:,.2f}\n" \
+                                      f"💳 *Plan de Financiación:* \n" \
+                                      f"• {n_cuotas} cuotas de *${valor_cuota:,.2f}*\n" \
+                                      f"• Total Financiado: ${p_fin:,.2f}\n\n" \
+                                      f"¿Te gustaría coordinar la seña o la entrega?"
                                 
                                 link = f"https://api.whatsapp.com/send?phone=549{tel_wsp.strip()}&text={urllib.parse.quote(msg)}"
                                 st.markdown(f'<meta http-equiv="refresh" content="0;url={link}">', unsafe_allow_html=True)
-                                st.success("✅ ¡Abriendo WhatsApp!")
+                                st.success("✅ ¡Abriendo WhatsApp con la foto y las cuotas!")
     else:
         st.error("⚠️ No se encontró la columna 'NOMBRE' en la planilla.")
 else:
