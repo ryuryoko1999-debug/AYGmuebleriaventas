@@ -1,196 +1,225 @@
 import streamlit as st
 import pandas as pd
+import requests
+import json
+import base64
 import urllib.parse
-from PIL import Image
-import io
 
-# Configuración de página en modo ancho (wide) para que imite la grilla de Mercado Libre
+# Configuración de página en modo ancho (tipo E-commerce)
 st.set_page_config(
-    page_title="A&G Ventas - Catálogo Oficial",
+    page_title="A&G Ventas Pro",
     page_icon="🛍️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS exactos para replicar las tarjetas de Mercado Libre
+# Estilos visuales limpios estilo Mercado Libre / Mercado Pago
 st.markdown("""
     <style>
     .stApp {
         background-color: #ededed;
         color: #333333;
     }
-    /* Estilo de tarjeta idéntico a Mercado Libre */
     .ml-card {
         background-color: #ffffff;
-        border-radius: 4px;
-        box-shadow: 0 1px 2px 0 rgba(0,0,0,0.1);
-        padding: 12px;
-        margin-bottom: 20px;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        border: 1px solid #e6e6e6;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 14px;
+        margin-bottom: 16px;
+        border: 1px solid #e0e0e0;
     }
     .ml-title {
         font-size: 14px;
-        color: #333333;
-        font-weight: 400;
-        margin-top: 8px;
-        margin-bottom: 6px;
-        line-height: 1.3;
-        height: 38px;
+        font-weight: 600;
+        color: #333;
+        margin: 8px 0;
+        height: 40px;
         overflow: hidden;
     }
     .ml-price {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 400;
-        color: #333333;
-        display: inline-block;
+        color: #333;
     }
     .ml-installments {
-        font-size: 14px;
-        color: #333333;
-        margin-top: 2px;
-    }
-    .ml-installments span {
+        font-size: 13px;
         color: #00a650;
         font-weight: 600;
     }
-    .ml-tag {
-        background-color: #e6f8ed;
-        color: #00a650;
-        font-size: 11px;
-        font-weight: 700;
-        padding: 2px 6px;
-        border-radius: 3px;
-        display: inline-block;
-        margin-top: 6px;
+    .stButton>button {
+        background-color: #3483fa;
+        color: white;
+        border-radius: 6px;
+        font-weight: bold;
+        border: none;
+        height: 38px;
+    }
+    .stButton>button:hover {
+        background-color: #2968c8;
+        color: white;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Memoria de productos (Catálogo inicial)
-if "productos" not in st.session_state:
-    st.session_state["productos"] = [
-        {
-            "nombre": "Ventilador Retractil De Techo Novohome Luz Calida Fria",
-            "precio": 105599.0,
-            "cuotas": 6,
-            "img": "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?auto=format&fit=crop&w=600&q=80",
-            "tag": "Llega gratis hoy"
-        },
-        {
-            "nombre": "Cafetera Espresso Digital Automatica 1.5 Litros 20 Bar",
-            "precio": 200699.0,
-            "cuotas": 6,
-            "img": "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&w=600&q=80",
-            "tag": "Llega gratis hoy"
-        },
-        {
-            "nombre": "Bicicleta Spinning Shock Rider Profesional Con Amortiguador",
-            "precio": 429999.0,
-            "cuotas": 6,
-            "img": "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80",
-            "tag": "Llega gratis hoy"
-        }
-    ]
+# Enlaces a tu Google Sheet "MUEBLES"
+SHEET_ID = "1Jw1ZtYGdAx2BLB9yxgmbZ7F4yc4Pka32bIa2XtxtSHw"  # ID de tu planilla MUEBLES
+GID = "0"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
 
-# --- PANEL LATERAL PARA ADMINISTRAR Y AGREGAR ARTÍCULOS ---
+# ⚠️ PEGA AQUÍ TU URL DE APPS SCRIPT DE LA PLANILLA MUEBLES
+SCRIPT_URL_MUEBLES = "https://script.google.com/macros/s/TU_SCRIPT_MUEBLES/exec"
+
+# --- PANEL LATERAL: AGREGAR NUEVO MUEBLE CON FOTO ---
 with st.sidebar:
-    st.markdown("<h2>➕ Nuevo Artículo</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:13px; color:#666;'>Carga productos con foto y precio al catálogo general.</p>", unsafe_allow_html=True)
+    st.markdown("<h2>➕ Registrar Nuevo Mueble</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:12px; color:#666;'>Sube la foto y carga los datos para actualizar el stock al instante.</p>", unsafe_allow_html=True)
     
-    with st.form("form_nuevo", clear_on_submit=True):
-        nuevo_nombre = st.text_input("Título del Mueble / Artículo")
-        nuevo_precio = st.number_input("Precio Contado ($)", min_value=1.0, value=150000.0, step=1000.0)
-        cant_cuotas_prod = st.selectbox("Cuotas sin interés referencial", options=[3, 6, 9, 12], index=1)
-        etiqueta_envio = st.text_input("Etiqueta (Ej: Llega gratis hoy)", value="Llega gratis hoy")
+    with st.form("form_nuevo_articulo", clear_on_submit=True):
+        nombre_mueble = st.text_input("Nombre del Mueble")
+        categoria_mueble = st.selectbox("Categoría", options=["LIVING", "COMEDOR", "DORMITORIO", "A.J GESTIÓN URBANA", "METALÚRGICA"])
+        precio_contado = st.number_input("Precio Contado ($)", min_value=1.0, value=200000.0, step=5000.0)
+        cantidad_stock = st.number_input("Cantidad en Stock", min_value=1, value=1, step=1)
+        descripcion = st.text_area("Descripción / Detalles")
         
-        # Subida de imagen desde celu o PC
-        foto_archivo = st.file_uploader("Foto del producto", type=["jpg", "png", "jpeg"])
+        cant_cuotas = st.selectbox("Cantidad de Cuotas", options=[3, 6, 9, 12], index=1)
+        interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 30.0, 10.0, 1.0)
         
-        btn_guardar = st.form_submit_button("Publicar en el Catálogo", use_container_width=True)
+        # Calcular precio financiado automáticamente
+        precio_financiado = precio_contado * (1 + (interes_est / 100))
         
-        if btn_guardar:
-            if not nuevo_nombre.strip():
-                st.error("⚠️ El título es obligatorio.")
+        # Subir foto real desde el celular o PC
+        foto_file = st.file_uploader("Foto del Mueble", type=["jpg", "jpeg", "png"])
+        
+        btn_publicar = st.form_submit_button("💾 Guardar Mueble en la Nube", use_container_width=True)
+        
+        if btn_publicar:
+            if not nombre_mueble.strip():
+                st.error("⚠️ El nombre es obligatorio.")
             else:
-                # Procesar imagen subida o usar una por defecto
-                if foto_archivo is not None:
-                    # Convertimos la imagen subida a bytes/url interna o guardamos el objeto
-                    img_bytes = foto_archivo.read()
-                    # Para simplificar la visualización en la grilla, usamos una URL de respaldo si es archivo local o procesamos
-                    img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80" 
+                # Convertir imagen a Base64 para enviarla de forma segura por Apps Script
+                img_base64 = ""
+                mime_type = "image/jpeg"
+                nombre_archivo = "mueble_default.jpg"
+                
+                if foto_file is not None:
+                    img_bytes = foto_file.read()
+                    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                    mime_type = foto_file.type
+                    nombre_archivo = foto_file.name
+
+                payload = {
+                    "action": "agregar_mueble",
+                    "nombre": nombre_mueble.strip(),
+                    "precio": precio_contado,
+                    "cantidad": cantidad_stock,
+                    "categoria": categoria_mueble,
+                    "descripcion": descripcion.strip(),
+                    "precioFinanciado": round(precio_financiado, 2),
+                    "cantCuotas": cant_cuotas,
+                    "imagenBase64": img_base64,
+                    "mimeType": mime_type,
+                    "nombreArchivo": nombre_archivo
+                }
+
+                if "script.google.com" in SCRIPT_URL_MUEBLES:
+                    try:
+                        res = requests.post(SCRIPT_URL_MUEBLES, data=json.dumps(payload), timeout=25)
+                        resultado = res.json()
+                        if resultado.get("status") == "OK":
+                            st.success("🎉 ¡Mueble guardado y foto subida a Google Drive!")
+                            st.cache_data.clear()
+                            st.rerun()
+                        else:
+                            st.error(f"Error del servidor: {resultado.get('message')}")
+                    except Exception as e:
+                        st.error(f"Error de conexión: {e}")
                 else:
-                    img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
+                    st.warning("⚠️ Configura la variable `SCRIPT_URL_MUEBLES` con tu Apps Script.")
 
-                st.session_state["productos"].append({
-                    "nombre": nuevo_nombre.strip(),
-                    "precio": nuevo_precio,
-                    "cuotas": cant_cuotas_prod,
-                    "img": img_url,
-                    "tag": etiqueta_envio.strip()
-                })
-                st.success("🎉 ¡Artículo publicado con éxito!")
-                st.rerun()
-
-    st.markdown("---")
-    st.markdown("### 🧮 Calculadora Express")
-    monto_calc = st.number_input("Monto a simular ($)", value=200000.0, step=10000.0)
-    cuotas_calc = st.selectbox("Plazo cuotas", [3, 6, 12], index=1)
-    interes_calc = st.slider("Interés mensual (%)", 0.0, 10.0, 3.0, 0.5)
-    
-    tot_calc = monto_calc * ((1 + (interes_calc/100)) ** cuotas_calc)
-    val_cuota_calc = tot_calc / cuotas_calc
-    st.info(f"💳 {cuotas_calc} cuotas de: **$ {val_cuota_calc:,.2f}**\nTotal: $ {tot_calc:,.2f}")
-
-# --- CUERPO PRINCIPAL (GRILLA ESTILO MERCADO LIBRE) ---
-st.markdown("<h2 style='color: #333;'>🛍️ A&G Mueblería - Catálogo de Ventas</h2>", unsafe_allow_html=True)
-busqueda_q = st.text_input("🔍 Buscar productos en stock...", placeholder="Buscar por nombre...", label_visibility="collapsed")
+# --- CUERPO PRINCIPAL: CATÁLOGO INTERNO DE VENTAS ---
+st.markdown("<h2>🛍️ A&G VENTAS PRO - Stock Disponible</h2>", unsafe_allow_html=True)
+busqueda = st.text_input("🔍 Buscar muebles en stock...", placeholder="Escribe el nombre del mueble...", label_visibility="collapsed")
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Filtrar productos
-prods_visibles = [p for p in st.session_state["productos"] if busqueda_q.lower() in p["nombre"].lower()]
+@st.cache_data(ttl=0)
+def cargar_catalogo():
+    try:
+        df = pd.read_csv(CSV_URL, header=2)
+        df.columns = [str(col).strip().upper() for col in df.columns]
+        return df
+    except Exception as e:
+        return None
 
-# Crear columnas en la grilla (3 productos por fila, igual que en la captura de Mercado Libre)
-num_columnas = 3
-columnas = st.columns(num_columnas)
+df_muebles = cargar_catalogo()
 
-for idx, prod in enumerate(prods_visibles):
-    col_actual = columnas[idx % num_columnas]
-    
-    with col_actual:
-        # Cálculo de cuotas individuales
-        valor_cuota_item = prod["precio"] / prod["cuotas"]
+if df_muebles is not None and not df_muebles.empty:
+    # Limpieza de columnas esperadas: ID, NOMBRE, PRECIO, CANTIDAD, CATEGORIA, DESCRIPCION, PRECIO FINANCIADO, CANT CUOTAS
+    col_nombre = next((c for c in df_muebles.columns if "NOMBRE" in c), None)
+    col_precio = next((c for c in df_muebles.columns if c == "PRECIO"), None)
+    col_cat = next((c for c in df_muebles.columns if "CATEGORIA" in c), None)
+    col_desc = next((c for c in df_muebles.columns if "DESCRIPCION" in c), None)
+    col_pfin = next((c for c in df_muebles.columns if "FINANCIADO" in c), None)
+    col_cuotas = next((c for c in df_muebles.columns if "CUOTAS" in c), None)
+
+    if col_nombre:
+        df_valid = df_muebles.dropna(subset=[col_nombre]).copy()
         
-        st.markdown(f"""
-            <div class="ml-card">
-                <div>
-                    <img src="{prod['img']}" style="width: 100%; height: 210px; object-fit: cover; border-radius: 3px;">
-                    <div class="ml-title">{prod['nombre']}</div>
-                    <div class="ml-price">$ {prod['precio']:,.2f}</div>
-                    <div class="ml-installments">{prod['cuotas']} cuotas de <span>$ {valor_cuota_item:,.2f}</span></div>
-                    <div class="ml-tag">{prod['tag']}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        # Filtro de búsqueda
+        if busqueda:
+            df_valid = df_valid[df_valid[col_nombre].astype(str).str.contains(busqueda, case=False, na=False)]
+
+        cols = st.columns(3) # Grilla de 3 columnas estilo Mercado Libre
         
-        # Acciones debajo de cada tarjeta para el vendedor
-        with st.expander("💬 Enviar Presupuesto WhatsApp"):
-            tel_cliente = st.text_input("Celular del cliente (ej: 3764xxxxxx)", key=f"tel_{idx}")
-            if st.button("🚀 Enviar por WhatsApp", key=f"btn_wsp_{idx}", use_container_width=True):
-                if not tel_cliente.strip():
-                    st.warning("⚠️ Ingrese el número del cliente.")
-                else:
-                    mensaje_wsp = f"¡Hola! 👋 Te enviamos la cotización oficial de *Mueblería A&G*:\n\n" \
-                                  f"🪑 *{prod['nombre']}*\n" \
-                                  f"💰 *Precio Contado:* ${prod['precio']:,.2f}\n" \
-                                  f"💳 *Financiación:* {prod['cuotas']} cuotas de ${valor_cuota_item:,.2f}\n\n" \
+        for idx, row in df_valid.iterrows():
+            col_actual = cols[idx % 3]
+            
+            nombre = str(row[col_nombre])
+            precio = float(str(row[col_precio]).replace('$', '').replace('.', '').replace(',', '.')) if col_precio and pd.notna(row[col_precio]) else 0.0
+            categoria = str(row[col_cat]) if col_cat and pd.notna(row[col_cat]) else "GENERAL"
+            desc_completa = str(row[col_desc]) if col_desc and pd.notna(row[col_desc]) else ""
+            
+            # Extraer imagen y descripción limpia
+            img_url = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"
+            desc_limpia = desc_completa
+            if "[FOTO:" in desc_completa:
+                partes = desc_completa.split("[FOTO:")
+                desc_limpia = partes[0].strip()
+                img_url = partes[1].replace("]", "").strip()
+
+            p_fin = float(str(row[col_pfin]).replace('$', '').replace('.', '').replace(',', '.')) if col_pfin and pd.notna(row[col_pfin]) else precio
+            n_cuotas = int(row[col_cuotas]) if col_cuotas and pd.notna(row[col_cuotas]) else 6
+            valor_cuota = p_fin / n_cuotas if n_cuotas > 0 else precio
+
+            with col_actual:
+                st.markdown(f"""
+                    <div class="ml-card">
+                        <img src="{img_url}" style="width: 100%; height: 190px; object-fit: cover; border-radius: 4px;">
+                        <span style="font-size:10px; font-weight:bold; background:#e6f0ff; color:#0073e6; padding:2px 6px; border-radius:3px; display:inline-block; margin-top:8px;">{categoria}</span>
+                        <div class="ml-title">{nombre}</div>
+                        <div style="font-size:11px; color:#666; margin-bottom:6px;">{desc_limpia}</div>
+                        <div class="ml-price">$ {precio:,.2f}</div>
+                        <div class="ml-installments">{n_cuotas} cuotas de $ {valor_cuota:,.2f}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Botón de WhatsApp integrado para el vendedor
+                with st.expander("💬 Enviar Presupuesto WhatsApp"):
+                    tel_wsp = st.text_input("Celular cliente (ej: 3764xxxxxx)", key=f"t_{idx}")
+                    if st.button("🚀 Enviar Presupuesto", key=f"b_{idx}", use_container_width=True):
+                        if not tel_wsp.strip():
+                            st.warning("⚠️ Ingrese el número.")
+                        else:
+                            msg = f"¡Hola! 👋 Te enviamos la cotización desde *Mueblería A&G*:\n\n" \
+                                  f"🪑 *{nombre}*\n" \
+                                  f"📝 {desc_limpia}\n" \
+                                  f"💰 *Contado:* ${precio:,.2f}\n" \
+                                  f"💳 *Financiación:* {n_cuotas} cuotas de ${valor_cuota:,.2f}\n\n" \
                                   f"¿Coordinamos la seña o el envío?"
-                    
-                    link_whatsapp = f"https://api.whatsapp.com/send?phone=549{tel_cliente.strip()}&text={urllib.parse.quote(mensaje_wsp)}"
-                    st.markdown(f'<meta http-equiv="refresh" content="0;url={link_whatsapp}">', unsafe_allow_html=True)
-                    st.success("✅ ¡Abriendo WhatsApp con el presupuesto!")
-
-        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+                            
+                            link = f"https://api.whatsapp.com/send?phone=549{tel_wsp.strip()}&text={urllib.parse.quote(msg)}"
+                            st.markdown(f'<meta http-equiv="refresh" content="0;url={link}">', unsafe_allow_html=True)
+                            st.success("✅ ¡Abriendo WhatsApp!")
+    else:
+        st.info("📌 Tu tabla MUEBLES está vacía o se están cargando los primeros registros.")
+else:
+    st.info("📌 Todavía no hay datos cargados en la hoja 'MUEBLES'. Utiliza el panel izquierdo para dar de alta tu primer artículo.")
