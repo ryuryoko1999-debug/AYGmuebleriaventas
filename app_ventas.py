@@ -83,7 +83,7 @@ with st.sidebar:
         descripcion = st.text_area("Descripción / Detalles")
         
         cant_cuotas = st.selectbox("Cantidad de Cuotas", options=[3, 6, 9, 12], index=1)
-        interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 30.0, 10.0, 1.0)
+        interes_est = st.slider("Recargo Financiero Estimado (%)", 0.0, 150.0, 10.0, 1.0)
         
         precio_financiado = precio_contado * (1 + (interes_est / 100))
         foto_file = st.file_uploader("Foto del Mueble", type=["jpg", "jpeg", "png"])
